@@ -1,0 +1,17 @@
+# Kafka基本术语
+
+主题：topic
+
+生产者：producer
+
+消费者：consumer
+
+副本：replica
+
+领导者副本：Leader Replica
+
+追随者副本：Follwer Replica
+
+​	在Kafka中，发布订阅的对象是Topic，我们可以为每个业务、每个应用甚至是每类数据都创建专属的Topic。向Topic发布消息的客户端应用程序称为Producer，生产者程序通常持续不断地向一个或者多个Topic发送消息，而订阅这些Topic信息的客户端应用程序被称为Consumer，Consumer也能同时订阅多个Topic信息。
+
+​	Kafka服务器端由被称为Broker的服务进程构成，也就是说一个Kafka集群由多个Broker组成，Broker负责接收和处理客户端发送的请求，以及对消息进行持久化。Broker服务进程部署在不同的机器是Kafka提供高可用性的手段之一，另外一种手段则是备份机制Replication，备份的思想就是把相同的数据拷贝到多台机器，而这些相同的数据拷贝在Kafka中被称为Replica，Replica的数量是可以配置的，这些Replica保存着相同的数据，却有着不同的角色和作用。Kafka定义了两类Replica，它们就是Leader Replica和Follwer Replica。前者是与客户端程序进行交互，后者只是被动的追随Leader Replica而已。
