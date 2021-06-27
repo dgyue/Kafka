@@ -6,6 +6,10 @@
 
 消费者：consumer
 
+消费者组：Consumer Group
+
+消费者位移：Consumer Offset
+
 副本：replica
 
 领导者副本：Leader Replica
@@ -16,6 +20,10 @@
 
 位移：offset
 
+吞吐量：TPS
+
+重平衡：Rebalance
+
 ​	在Kafka中，发布订阅的对象是Topic，我们可以为每个业务、每个应用甚至是每类数据都创建专属的Topic。向Topic发布消息的客户端应用程序称为Producer，生产者程序通常持续不断地向一个或者多个Topic发送消息，而订阅这些Topic信息的客户端应用程序被称为Consumer，Consumer也能同时订阅多个Topic信息。
 
 ​	Kafka服务器端由被称为Broker的服务进程构成，也就是说一个Kafka集群由多个Broker组成，Broker负责接收和处理客户端发送的请求，以及对消息进行持久化。Broker服务进程部署在不同的机器是Kafka提供高可用性的手段之一，另外一种手段则是备份机制Replication，备份的思想就是把相同的数据拷贝到多台机器，而这些相同的数据拷贝在Kafka中被称为Replica，Replica的数量是可以配置的，这些Replica保存着相同的数据，却有着不同的角色和作用。Kafka定义了两类Replica，它们就是Leader Replica和Follwer Replica。前者是与客户端程序进行交互，后者只是被动的追随Leader Replica而已。副本的工作机制是producer向Leader Replica写消息，而consumer从Leader Replica读消息。至于Follwer Replica只做一件事，那就是向Leader Replica发送消息，请求Leader Replica把最新生产的消息发送给它，这样它就能保持与Leader的同步。
@@ -23,3 +31,30 @@
 ​	Kafka解决伸缩性问题的处理办法是把数据分割成多份保存在不同的Broker上，避免Leader Replica数据太多导致单个Broker无法容纳，这种机制就是Partition。Kafka中的Partition机制是指将topic划分成多个partition，每个partition是一组有序的消息日志，producer生产的每条消息只会被发送到一个partition中，也就是说如果向一个双partition的topic发送一条消息，这条消息要么在partition 0中，要么在partition 1中，注意Kafka的partition编号是从0开始的。
 
 ​	到此，我们可以看出这样一个关系，topic包含partition，那么Replica是在什么位置呢？实际上Replica是在partition下定义的，每个partition下可以配置若干个Replica，其中只能有1个Leader Replica和N-1个Follwer Replica。producer向partition写消息，每条消息在partition中的位置信息由一个叫Offset的数据来表示。Offset总是从0开始。
+
+​	接下来是Broker是如何对数据持久化方面的知识。总的来说，Kafka使用消息日志来保存数据，一个日志就是磁盘上一个只能追加写（append-only）消息的物理文件。因为只能追加写入，所以避免了缓慢的随机I/O操作，改为性能较好的顺序I/O写操作，这也是实现Kafka高吞吐特性的一个重要手段。如果不停的向一个日志写消息，最终也会耗尽所有的磁盘空间，因此Kafka必然要定期删除消息以回收磁盘，删除消息简单的说是通过日志段（Log Segment）机制。在Kafka底层，一个日志又进一步细分成多个日志段，并将老的日志段封存起来，Kafka在后台有定时任务定期地检查老的日志段是否能够被删除，从而实现回收磁盘空间的目的。
+
+​	在Kafka中还引入了Consumer Group的概念，指的是多个consumer实例共同组成一个组来消费一组topic。这组topic中的partition都只会被组内的一个consumer实例消费，其他consumer实例不能消费它，引入Consumer Group主要是为了提升Consumer端的TPS。Consumer Group里面的所有consumer不仅瓜分topic数据，而且他们还会彼此协助，假设组内某个实例挂掉，Kafka能够自动检测，然后把这个坏掉的实例之前负责的分区转移给其他存活的consumer，这个过程就是Kafka中的Rebalance。
+
+​	每个consumer在消费的过程中必然需要有个字段记录它当前消费到了partition的哪个位置上，这个字段就是Consumer Offset。每个consumer有着自己的Consumer Offset。
+
+### 小结
+
+主题：Topic。承载消息的逻辑容器，实际中多用来区分具体业务。
+
+分区：Partition。一个有序不变的消息队列，每个主题下可以有多个分区。
+
+消息位移：Offset。表示分区中每条消息的位置信息。
+
+副本：Replica。Kafka中同一条消息能够被拷贝到多个地方以提供数据冗余，这些地方就是所谓的副本。
+
+生产者：Producer。向主题发布新消息的应用程序。
+
+消费者：Consumer。从主题订阅新消息的应用程序。
+
+消费者位移：Consumer Offset。消费者消费进度，每个消费者都有自己的消费者位移。
+
+消费者组：Consumer Group。多个消费者实例共同组成的一个组。
+
+重平衡：Rebalance。消费者组内某个消费者实例挂掉后，其他消费者实例自动重新订阅主题分区的过程。
+
